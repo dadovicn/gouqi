@@ -1,7 +1,6 @@
 package com.cjyw.gouqi.core;
 
 import com.cjyw.gouqi.util.Convertor;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -63,13 +62,12 @@ public class RadioServer {
                             }
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                log.debug("收到消息: {} - {}", a.get(), msgToHex(msg));
+//                                log.info("收到消息: {} - {}", a.get(), msgToHex(msg));
                                 ByteBuf byteBuf = (ByteBuf) msg;
                                 parse(byteBuf);
+                                // todo release bytebuf
+                                byteBuf.release();
                                 a.getAndAdd(1);
-//                                if(Long.valueOf(System.currentTimeMillis()) - now.get() > 1000 && (Long.valueOf(System.currentTimeMillis()) - now.get() < 2000) ) {
-//                                    System.out.println("dadovicn" + a.get());
-//                                }
                             }
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -124,51 +122,64 @@ public class RadioServer {
         log.debug("canId-DEC: {}", canId);
         byte[] data = new byte[8];
         byteBuf.getBytes(5, data, 0, 8);
-        List<Long> targetStatus = Longs.asList(Stream.of(Convertor.bytesToBinary(data).split("")).mapToLong(Long::parseLong).toArray());
+        List<Long> target = Longs.asList(Stream.of(Convertor.bytesToBinary(data).split("")).mapToLong(Long::parseLong).toArray());
         if(canId >= 1024 && canId <= 1087) {
-            msgIndex1(targetStatus, canId);
+            msgIndex1(target, canId, Convertor.bytesToHex(data));
         } else if(canId >= 1280 && canId <= 1343) {
-            msgIndex2(targetStatus);
+            msgIndex2(target);
         }
     }
 
-    private void msgIndex1(List<Long> t, int canId) {
-        log.debug("检测到index1: -> ");
-        log.debug("目标轨迹状态: {}", t.subList(0, 3+1)); // 目标轨迹状态
-        log.debug("帧号后四位: {}", t.subList(4, 7+1)); // 帧号后四位
-        log.debug("目标置信度 (不完全等同于概率): {}", t.subList(8, 14+1)); // 目标置信度 (不完全等同于概率)
+    private void msgIndex1(List<Long> t, int canId, String source) {
+        // 轨迹状态 0: empty, 1: first detected 2: first detected 3: valid, 10: invalid
+        List<Long> track = new ArrayList<Long>() {{ addAll(t.subList(0, 4)); }};
+        Collections.reverse(track);
+        Long trackValue = compute(track);
+        // 帧号后四位
+        log.debug("帧号后四位: {}", t.subList(4, 8));
+        // 目标置信度
+        List<Long> confidence =  t.subList(8, 15);
+        Collections.reverse(confidence);
+        Long confidenceValue = compute(confidence);
+
         log.debug("预留: {}", t.subList(15, 15)); // 预留
-        log.debug("目标水平角度-1: {}", t.subList(16, 23+1)); // 目标水平角度-1
-        log.debug("目标水平角度-2: {}", t.subList(29, 31+1)); // 目标水平角度-2
-        log.debug("目标相对距离-1: {}", t.subList(24, 28+1)); // 目标相对距离-1
-        log.debug("目标相对距离-2: {}", t.subList(32, 39+1)); // 目标相对距离-2
-        List<Long> range = new ArrayList<Long>() {{
-            addAll(t.subList(32, 39+1));
-            addAll(t.subList(24, 28+1));
 
-        }};
-        Collections.reverse(range);
-        long resRange = compute(range);
-        log.info("目标-{}-相对距离: {}", canId, String.format("%.2f", Double.valueOf(resRange) * 0.05));
-        log.debug("目标强度(相对量)-1: {}", t.subList(40, 47+1)); // 目标强度(相对量)-1
-        log.debug("目标强度(相对量)-2: {}", t.subList(54, 55+1)); // 目标强度(相对量)-2
+        Long angleValue = val(t.subList(16, 24), t.subList(29, 32));
+        String angleStr = String.format("%.2f", Double.valueOf(angleValue * 0.1d - 102.4d));
+        log.debug("目标水平角度: {}, 原始值: {}", angleStr, angleValue);
 
-        log.info("目标相对径向速度-1: {}", t.subList(48, 53+1)); // 目标相对径向速度-1
-        log.info("目标相对径向速度-2: {}", t.subList(56, 63+1)); // 目标相对径向速度-2
+        Long rangeValue = val(t.subList(24, 29), t.subList(32, 40));
+        String rangeStr = String.format("%.2f", Double.valueOf(rangeValue) * 0.05);
+        log.debug("目标-{}-相对距离: {}, 原始值: {}", canId, rangeStr , rangeValue);
 
-        List<Long> rate = new ArrayList<Long>() {{
-            addAll(t.subList(56, 63+1));
-            addAll(t.subList(48, 53+1));
-        }};
-        log.info("目标相对径向速度---2: {}", rate); // 目标相对径向速度-2
-        Collections.reverse(rate);
-        long resRate = compute(rate);
-        log.info("目标-{}-相对径向速度: {}, 原始值: {}", canId, String.format("%.2f", Double.valueOf(resRate) * 0.02 - 163.84), resRange);
+        long powerValue = val(t.subList(40, 48), t.subList(54, 56));
+        String powerStr = String.format("%.2f", Double.valueOf(powerValue) * 0.1d);
+        log.debug("目标强度: {}, 原始值: {}", powerStr, powerValue);
+
+        long rateValue = val(t.subList(48, 54), t.subList(56, 64));
+        String rateStr = String.format("%.2f", Double.valueOf(rateValue) * 0.02d - 163.84d);
+        if(trackValue.intValue() == 3 && confidenceValue.intValue() > 30 && (Double.valueOf(rateValue) * 0.02d - 163.84d) > 15) {
+            log.info("| {}=======================================================================================>>>>|", a.get());
+            log.info("|= 位图({}个): {}", t.size(), t);
+            log.info("|= 原始字节hex: {}", source);
+            log.info("|= 目标轨迹状态值: {}, canId: {}, 置信度: {}, 水平角度: {}", trackValue, canId, confidenceValue, angleStr);
+            log.info("|= 目标-{}-相对径向速度: {}, 原始值: {} || 目标相对距离: {}, 原始值: {}", canId, rateStr, rateValue, rangeStr, rangeValue);
+            log.info("|<<<<=======================================================================================|");
+        }
     }
 
     private long compute(List<Long> res) {
-        Collections.reverse(res);
         return Long.valueOf(String.valueOf(res.stream().reduce((x,y) -> Long.valueOf(x + String.valueOf(y))).get()), 2);
+    }
+
+    private long val(List<Long> big, List<Long> end) {
+        Collections.reverse(big);
+        Collections.reverse(end);
+        List<Long> sort = new ArrayList<Long>() {{
+            addAll(big);
+            addAll(end);
+        }};
+        return compute(sort);
     }
 
     private void msgIndex2(List<Long> t) {
