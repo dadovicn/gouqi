@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -131,39 +130,47 @@ public class RadioServer {
     }
 
     private void msgIndex1(List<Long> t, int canId, String source) {
-        // 轨迹状态 0: empty, 1: first detected 2: first detected 3: valid, 10: invalid
-        List<Long> track = new ArrayList<Long>() {{ addAll(t.subList(0, 4)); }};
-        Collections.reverse(track);
-        Long trackValue = compute(track);
         // 帧号后四位
-        log.debug("帧号后四位: {}", t.subList(4, 8));
+        Long frameValue = compute(t.subList(0, 4));
+        log.debug("帧号后四位: {}", frameValue);
+
+        // 轨迹状态 0: empty, 1: first detected 2: first detected 3: valid, 10: invalid
+        Long trackValue = compute(t.subList(4, 8));
+        log.debug("轨迹状态: {}", trackValue);
         // 目标置信度
-        List<Long> confidence =  t.subList(8, 15);
-        Collections.reverse(confidence);
-        Long confidenceValue = compute(confidence);
+        Long confidenceValue = compute(t.subList(9, 16));
+        log.debug("目标置信度: {}", confidenceValue);
 
         log.debug("预留: {}", t.subList(15, 15)); // 预留
 
-        Long angleValue = val(t.subList(16, 24), t.subList(29, 32));
+        Long angleValue = val(t.subList(16, 24), t.subList(24, 27));
         String angleStr = String.format("%.2f", Double.valueOf(angleValue * 0.1d - 102.4d));
         log.debug("目标水平角度: {}, 原始值: {}", angleStr, angleValue);
 
-        Long rangeValue = val(t.subList(24, 29), t.subList(32, 40));
+        Long rangeValue = val(t.subList(27, 32), t.subList(32, 40));
         String rangeStr = String.format("%.2f", Double.valueOf(rangeValue) * 0.05);
         log.debug("目标-{}-相对距离: {}, 原始值: {}", canId, rangeStr , rangeValue);
 
-        long powerValue = val(t.subList(40, 48), t.subList(54, 56));
+        long powerValue = val(t.subList(40, 48), t.subList(48, 50));
         String powerStr = String.format("%.2f", Double.valueOf(powerValue) * 0.1d);
         log.debug("目标强度: {}, 原始值: {}", powerStr, powerValue);
 
-        long rateValue = val(t.subList(48, 54), t.subList(56, 64));
+        long rateValue = val(t.subList(50, 56), t.subList(56, 64));
         String rateStr = String.format("%.2f", Double.valueOf(rateValue) * 0.02d - 163.84d);
-        if(trackValue.intValue() == 3 && confidenceValue.intValue() > 30 && (Double.valueOf(rateValue) * 0.02d - 163.84d) > 15) {
+        if(trackValue.intValue() == 3) {
             log.info("| {}=======================================================================================>>>>|", a.get());
             log.info("|= 位图({}个): {}", t.size(), t);
-            log.info("|= 原始字节hex: {}", source);
-            log.info("|= 目标轨迹状态值: {}, canId: {}, 置信度: {}, 水平角度: {}", trackValue, canId, confidenceValue, angleStr);
-            log.info("|= 目标-{}-相对径向速度: {}, 原始值: {} || 目标相对距离: {}, 原始值: {}", canId, rateStr, rateValue, rangeStr, rangeValue);
+            log.info("|= canId: {} , 原始字节hex: {}", canId, source);
+
+            log.info("|= 帧号: {}, 轨迹状态: {}, 目标置信度: {}, 水平角度:{}-{}, 相对距离: {}-{}, 目标强度: {}-{}, 径向速度: {}-{} ",
+                    frameValue,
+                    trackValue,
+                    confidenceValue,
+                    angleStr, angleValue,
+                    rangeStr, rangeValue,
+                    powerStr, powerValue,
+                    rateStr, rangeValue
+            );
             log.info("|<<<<=======================================================================================|");
         }
     }
@@ -173,8 +180,6 @@ public class RadioServer {
     }
 
     private long val(List<Long> big, List<Long> end) {
-        Collections.reverse(big);
-        Collections.reverse(end);
         List<Long> sort = new ArrayList<Long>() {{
             addAll(big);
             addAll(end);
