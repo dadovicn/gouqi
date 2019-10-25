@@ -82,10 +82,6 @@ public class RadioServer {
                 });
 
         ChannelFuture f = b.bind(port).sync();
-        // 心里的话, 我想要带你回家
-        // 在那深夜酒吧, 哪管他是真是假
-        // 请你尽情摇摆, 忘记中意的他
-        // 你是最迷人噶, 你知道吗
         log.debug("{} 启动成功", id);
     }
 
@@ -157,12 +153,13 @@ public class RadioServer {
 
         long rateValue = val(t.subList(50, 56), t.subList(56, 64));
         String rateStr = String.format("%.2f", Double.valueOf(rateValue) * 0.02d - 163.84d);
-        if(trackValue.intValue() == 3) {
-            log.info("| {}=======================================================================================>>>>|", a.get());
-            log.info("|= 位图({}个): {}", t.size(), t);
-            log.info("|= canId: {} , 原始字节hex: {}", canId, source);
-
-            log.info("|= 帧号: {}, 轨迹状态: {}, 目标置信度: {}, 水平角度:{}-{}, 相对距离: {}-{}, 目标强度: {}-{}, 径向速度: {}-{} ",
+        if(trackValue.intValue() == 3 || trackValue.intValue() == 1 ) {
+            TraceTarget.trace(canId, trackValue, confidenceValue, rangeValue);
+            log.debug("|= 位图({}个): {}", t.size(), t);
+            log.debug("|= canId: {} , 原始字节hex: {}", canId, source);
+            log.debug("|= 序号:{}, canId:{},  帧号: {}, 轨迹状态: {}, 目标置信度: {}, 水平角度:{}-{}, 相对距离: {}-{}, 目标强度: {}-{}, 径向速度: {}-{} ",
+                    a.get(),
+                    canId,
                     frameValue,
                     trackValue,
                     confidenceValue,
@@ -171,7 +168,6 @@ public class RadioServer {
                     powerStr, powerValue,
                     rateStr, rangeValue
             );
-            log.info("|<<<<=======================================================================================|");
         }
     }
 

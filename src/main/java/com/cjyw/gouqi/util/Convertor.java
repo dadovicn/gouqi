@@ -82,6 +82,25 @@ public class Convertor {
         return result;
     }
 
+    public static byte[] hexToBytes(String s) {
+
+        if ((s == null) || (s.trim().length() == 0)) return null;
+
+        int len = s.length() / 2;
+        byte[] b = new byte[len];
+
+        char[] hexChars = s.toLowerCase().toCharArray();
+        for (int i = 0; i < len; i++) {
+            int pos = i * 2;
+            int idx = HEX_STRING.indexOf(hexChars[pos]);
+            if (idx == -1) throw new NumberFormatException("Invalid character '" + hexChars[pos] + "'!");
+            int idx1 = HEX_STRING.indexOf(hexChars[pos + 1]);
+            if (idx1 == -1) throw new NumberFormatException("Invalid character '" + hexChars[pos] + "'!");
+            b[i] = (byte) ((idx << 4) | idx1);
+        }
+
+        return b;
+    }
 
     public static void main(String[] args) {
         byte a = 0x2c;
