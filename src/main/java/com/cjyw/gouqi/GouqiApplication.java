@@ -2,6 +2,8 @@ package com.cjyw.gouqi;
 
 import com.cjyw.gouqi.core.RadioServer;
 import com.cjyw.gouqi.core.report.mq.TargetReport;
+import com.cjyw.gouqi.fake.Fake;
+import com.cjyw.gouqi.fake.WebSocketServer;
 import com.cjyw.gouqi.util.Convertor;
 import com.cjyw.gouqi.util.config.PropertiesSource;
 
@@ -14,7 +16,11 @@ import java.util.List;
  */
 public class GouqiApplication {
     public static void main(String[] args) throws Exception {
-        RadioServer server = new RadioServer();
-        server.run(8887);
+//        RadioServer server = new RadioServer();
+//        server.run(8887);
+        int port = 8080;
+        new WebSocketServer().run(port);
+
+
     }
 }
