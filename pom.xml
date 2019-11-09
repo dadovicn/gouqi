@@ -8,7 +8,7 @@
     <artifactId>gouqi</artifactId>
     <version>1.0</version>
     <properties>
-        <libScope>provided</libScope>
+        <libScope>compile</libScope>
     </properties>
 
     <dependencies>
@@ -36,6 +36,24 @@
             <version>23.0</version>
             <scope>${libScope}</scope>
         </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.11</version>
+            <scope>${libScope}</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>3.6.5</version>
+            <scope>${libScope}</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.49</version>
+            <scope>${libScope}</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -59,7 +77,20 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>com.cjyw.gouqi.GouqiApplication</Main-Class>
-                                        <Class-Path>lib/animal-sniffer-annotations-1.14.jar lib/error_prone_annotations-2.0.18.jar lib/guava-23.0.jar lib/j2objc-annotations-1.1.jar lib/jsr305-1.3.9.jar lib/logback-classic-1.2.3.jar lib/logback-core-1.2.3.jar lib/netty-all-4.1.34.Final.jar lib/slf4j-api-1.7.25.jar</Class-Path>
+                                        <Class-Path>
+                                            lib/animal-sniffer-annotations-1.14.jar
+                                            lib/error_prone_annotations-2.0.18.jar
+                                            lib/guava-23.0.jar
+                                            lib/j2objc-annotations-1.1.jar
+                                            lib/jsr305-1.3.9.jar
+                                            lib/logback-classic-1.2.3.jar
+                                            lib/logback-core-1.2.3.jar
+                                            lib/netty-all-4.1.34.Final.jar
+                                            lib/slf4j-api-1.7.25.jar
+                                            lib/snakeyaml-1.11.jar
+                                            lib/fastjson-1.2.49.jar
+                                            lib/amqp-client-3.6.5.jar
+                                        </Class-Path>
                                     </manifestEntries>
                                 </transformer>
                             </transformers>

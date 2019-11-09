@@ -1,11 +1,16 @@
 package com.cjyw.gouqi.core;
 
+import com.alibaba.fastjson.JSON;
+import com.cjyw.gouqi.core.report.mq.TargetReport;
 import com.cjyw.gouqi.entity.Target;
+import com.cjyw.gouqi.util.config.PropertiesSource;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -49,18 +54,18 @@ public class TraceTarget {
                     Target t1 = targetList.get(targetList.size() -2);
                     Target t2 = targetList.get(targetList.size() -1);
                     trueTarget.put(canId, new AtomicInteger(trueTarget.getIfPresent(canId).addAndGet(1)));
-                    log.info("canId:{}, 置信度:{}, 距离:{}", canId, t1.getConfidenceVal(), String.format("%.2f", Double.valueOf(t1.getRangeVal()) * 0.05));
-                    log.info("canId:{}, 置信度:{}, 距离:{}", canId, t2.getConfidenceVal(), String.format("%.2f", Double.valueOf(t1.getRangeVal()) * 0.05));
                 }
                 if(factorIndex.getIfPresent(canId) >= 100 ) {
                     // ok
                     if(factorIndex.getIfPresent(canId) == 100) {
                         targetList.stream().forEach(i -> {
+                            TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(i));
                             log.info("canId:{}, 置信度:{}, 距离:{}, 轨迹状态: {}", canId, i.getConfidenceVal(), String.format("%.2f", Double.valueOf(i.getRangeVal()) * 0.05), i.getTraceVal());
                         });
                         factorIndex.put(canId, 101);
                     } else {
                         if(cur.getTraceVal() == 3) {
+                            TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
                             log.info("canId:{}, 置信度:{}, 距离:{}, 轨迹状态: {}", canId, cur.getConfidenceVal(), String.format("%.2f", Double.valueOf(rangeVal) * 0.05), traceVal);
                         }
                     }
@@ -78,7 +83,6 @@ public class TraceTarget {
                     && rangeVal < 7000l  // 对于大车和小车都一样
                 ) {
                     // 真实目标
-
                     trueTarget.put(canId, new AtomicInteger(0));
                 }
             }

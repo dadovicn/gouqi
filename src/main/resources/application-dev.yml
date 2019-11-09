@@ -1,0 +1,9 @@
+rabbitConfig:
+  host: "39.98.51.253"
+  port: "5672"
+  userName: "admin"
+  password: "qhlk@2017"
+  virtualHost: "/"
+  radarQueueName: "itsu.radar.queue"
+  radarQueueExchange: "itsu.radar.exchange"
+  radarQueueRoutingKey: "radar"
