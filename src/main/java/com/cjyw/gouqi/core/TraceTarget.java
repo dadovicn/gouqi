@@ -40,8 +40,8 @@ public class TraceTarget {
      * @param confidenceVal  置信度
      * @param rangeVal 距离
      */
-    public static void trace(int canId, Long traceVal,  Long confidenceVal, Long rangeVal) {
-        Target cur = new Target(traceVal, confidenceVal, rangeVal);
+    public static void trace(int canId, Long traceVal,  double confidenceVal, double rangeVal, double angleVal, double rateValue, double powerValue) {
+        Target cur = new Target(canId, traceVal, confidenceVal, rangeVal, angleVal, rateValue, powerValue);
         if(targetsCache.getIfPresent(canId) == null) {
             targetsCache.put(canId, new ArrayList<Target>() {{
                 add(cur);
@@ -51,8 +51,6 @@ public class TraceTarget {
             if(trueTarget.getIfPresent(canId) != null) {
                 if(trueTarget.getIfPresent(canId).get() == 0) {
                     factorIndex.put(canId, targetList.size());
-                    Target t1 = targetList.get(targetList.size() -2);
-                    Target t2 = targetList.get(targetList.size() -1);
                     trueTarget.put(canId, new AtomicInteger(trueTarget.getIfPresent(canId).addAndGet(1)));
                 }
                 if(factorIndex.getIfPresent(canId) >= 100 ) {
@@ -60,13 +58,13 @@ public class TraceTarget {
                     if(factorIndex.getIfPresent(canId) == 100) {
                         targetList.stream().forEach(i -> {
                             TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(i));
-                            log.info("canId:{}, 置信度:{}, 距离:{}, 轨迹状态: {}", canId, i.getConfidenceVal(), String.format("%.2f", Double.valueOf(i.getRangeVal()) * 0.05), i.getTraceVal());
+                            log.info(i.toString());
                         });
                         factorIndex.put(canId, 101);
                     } else {
                         if(cur.getTraceVal() == 3) {
                             TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
-                            log.info("canId:{}, 置信度:{}, 距离:{}, 轨迹状态: {}", canId, cur.getConfidenceVal(), String.format("%.2f", Double.valueOf(rangeVal) * 0.05), traceVal);
+                            log.info(cur.toString());
                         }
                     }
 
@@ -96,7 +94,7 @@ public class TraceTarget {
      * @param targets
      */
     public static void checkConfidence(int canId, List<Target> targets) {
-        long score = targets.stream().map(x -> x.getConfidenceVal()).collect(Collectors.toList()).stream().reduce((x, y) -> x + y).get();
+        double score = targets.stream().map(x -> x.getConfidenceVal()).collect(Collectors.toList()).stream().reduce((x, y) -> x + y).get();
         log.debug("分数:{} ", score);
         if((Double.valueOf(score) / 6) > 94.0) {
             log.info("结果: {}", Double.valueOf(score) / 6);

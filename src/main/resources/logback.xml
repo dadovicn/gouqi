@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- 日志根目录-->
-    <property name="LOG_HOME" value="/Users/duandongdong/daodao"/>
+    <property name="LOG_HOME" value="/home/logs"/>
     <!-- 日志级别 -->
-    <property name="LOG_ROOT_LEVEL" value="debug"/>
+    <property name="LOG_ROOT_LEVEL" value="info"/>
     <!--  标识这个"STDOUT" 将会添加到这个logger -->
     <property name="STDOUT" source="log.stdout" defaultValue="STDOUT"/>
     <!-- 日志文件名称-->
@@ -93,8 +93,8 @@
     <!-- ${LOG_ROOT_LEVEL} 日志级别 -->
     <root level="${LOG_ROOT_LEVEL}">
 
-         标识这个"${STDOUT}"将会添加到这个logger
-        <appender-ref ref="${STDOUT}"/>
+        <!-- 标识这个"${STDOUT}"将会添加到这个logger -->
+<!--        <appender-ref ref="${STDOUT}"/>-->
 
         <!-- FILE_ALL 日志输出添加到 logger -->
         <appender-ref ref="FILE_ALL"/>

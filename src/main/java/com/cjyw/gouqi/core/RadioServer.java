@@ -141,33 +141,38 @@ public class RadioServer {
 
         Long angleValue = val(t.subList(16, 24), t.subList(24, 27));
         String angleStr = String.format("%.2f", Double.valueOf(angleValue * 0.1d - 102.4d));
+        double angleRes = Convertor.scale(Double.valueOf(angleValue * 0.1d - 102.4d));
         log.debug("目标水平角度: {}, 原始值: {}", angleStr, angleValue);
 
         Long rangeValue = val(t.subList(27, 32), t.subList(32, 40));
         String rangeStr = String.format("%.2f", Double.valueOf(rangeValue) * 0.05);
+        double rangeRes = Convertor.scale(Double.valueOf(rangeValue) * 0.05);
         log.debug("目标-{}-相对距离: {}, 原始值: {}", canId, rangeStr , rangeValue);
 
         long powerValue = val(t.subList(40, 48), t.subList(48, 50));
         String powerStr = String.format("%.2f", Double.valueOf(powerValue) * 0.1d);
+        double powerRes = Convertor.scale(Double.valueOf(powerValue) * 0.1d);
         log.debug("目标强度: {}, 原始值: {}", powerStr, powerValue);
 
         long rateValue = val(t.subList(50, 56), t.subList(56, 64));
+        double rateRes = Convertor.scale(Double.valueOf(rateValue) * 0.02d - 163.84d);
         String rateStr = String.format("%.2f", Double.valueOf(rateValue) * 0.02d - 163.84d);
+
         if(trackValue.intValue() == 3 || trackValue.intValue() == 1 ) {
-            TraceTarget.trace(canId, trackValue, confidenceValue, rangeValue);
+            TraceTarget.trace(canId, trackValue, confidenceValue, rangeRes, angleRes, rateRes, powerRes);
             log.debug("|= 位图({}个): {}", t.size(), t);
             log.debug("|= canId: {} , 原始字节hex: {}", canId, source);
-            log.debug("|= 序号:{}, canId:{},  帧号: {}, 轨迹状态: {}, 目标置信度: {}, 水平角度:{}-{}, 相对距离: {}-{}, 目标强度: {}-{}, 径向速度: {}-{} ",
+            log.debug("|= 序号:{}, canId:{},  帧号: {}, 轨迹状态: {}, 目标置信度: {}, 水平角度:{}, 相对距离: {}, 目标强度: {}, 径向速度: {} ",
                     a.get(),
                     canId,
                     frameValue,
                     trackValue,
                     confidenceValue,
-                    angleStr, angleValue,
-                    rangeStr, rangeValue,
-                    powerStr, powerValue,
-                    rateStr, rangeValue
-            );
+                    angleStr,
+                    rangeStr,
+                    powerStr,
+                    rateStr
+                    );
         }
     }
 

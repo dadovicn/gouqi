@@ -1,5 +1,5 @@
 rabbitConfig:
-  host: "39.98.51.253"
+  host: "122.51.241.101"
   port: "5672"
   userName: "admin"
   password: "qhlk@2017"

@@ -8,7 +8,7 @@
     <artifactId>gouqi</artifactId>
     <version>1.0</version>
     <properties>
-        <libScope>compile</libScope>
+        <libScope>provided</libScope>
     </properties>
 
     <dependencies>
@@ -54,12 +54,12 @@
             <version>1.2.49</version>
             <scope>${libScope}</scope>
         </dependency>
-        <dependency>
-            <groupId>com.corundumstudio.socketio</groupId>
-            <artifactId>netty-socketio</artifactId>
-            <version>1.7.12</version>
-            <scope>${libScope}</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.corundumstudio.socketio</groupId>-->
+<!--            <artifactId>netty-socketio</artifactId>-->
+<!--            <version>1.7.12</version>-->
+<!--            <scope>${libScope}</scope>-->
+<!--        </dependency>-->
     </dependencies>
 
     <build>
