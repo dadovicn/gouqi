@@ -158,7 +158,7 @@ public class RadioServer {
         double rateRes = Convertor.scale(Double.valueOf(rateValue) * 0.02d - 163.84d);
         String rateStr = String.format("%.2f", Double.valueOf(rateValue) * 0.02d - 163.84d);
 
-        if(trackValue.intValue() == 3 || trackValue.intValue() == 1 ) {
+        if(trackValue.intValue() == 3) {
             TraceTarget.trace(canId, trackValue, confidenceValue, rangeRes, angleRes, rateRes, powerRes);
             log.debug("|= 位图({}个): {}", t.size(), t);
             log.debug("|= canId: {} , 原始字节hex: {}", canId, source);

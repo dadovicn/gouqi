@@ -42,64 +42,67 @@ public class TraceTarget {
      */
     public static void trace(int canId, Long traceVal,  double confidenceVal, double rangeVal, double angleVal, double rateValue, double powerValue) {
         Target cur = new Target(canId, traceVal, confidenceVal, rangeVal, angleVal, rateValue, powerValue);
-        if(targetsCache.getIfPresent(canId) == null) {
-            targetsCache.put(canId, new ArrayList<Target>() {{
-                add(cur);
-            }});
-        } else {
-            List<Target> targetList = targetsCache.getIfPresent(canId);
-            if(trueTarget.getIfPresent(canId) != null) {
-                if(trueTarget.getIfPresent(canId).get() == 0) {
-                    factorIndex.put(canId, targetList.size());
-                    trueTarget.put(canId, new AtomicInteger(trueTarget.getIfPresent(canId).addAndGet(1)));
-                }
-                if(factorIndex.getIfPresent(canId) >= 100 ) {
-                    // ok
-                    if(factorIndex.getIfPresent(canId) == 100) {
-                        targetList.stream().forEach(i -> {
-                            TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(i));
-                            log.info(i.toString());
-                        });
-                        factorIndex.put(canId, 101);
-                    } else {
-                        if(cur.getTraceVal() == 3) {
-                            TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
-                            log.info(cur.toString());
-                        }
-                    }
-
-                } else {
-                    Integer factorSize = factorIndex.getIfPresent(canId) + 8;
-                    if(targetList.size() > factorSize) {
-                        log.debug("targetList.size = {}, {} ", targetList.size(), factorSize);
-                        checkConfidence(canId, targetList.subList(factorIndex.getIfPresent(canId), factorIndex.getIfPresent(canId) + 6));
-                    }
-                }
-
-            } else {
-                if (cur.getConfidenceVal().intValue() == 80 && targetList.get(targetList.size() -1).getConfidenceVal().intValue() == 60
-                    && rangeVal < 7000l  // 对于大车和小车都一样
-                ) {
-                    // 真实目标
-                    trueTarget.put(canId, new AtomicInteger(0));
-                }
-            }
-            targetList.add(cur);
-        }
-    }
-
-    /**
-     * 算出连续六个目标的总体评分, 达到标准, 放行.
-     * @param canId
-     * @param targets
-     */
-    public static void checkConfidence(int canId, List<Target> targets) {
-        double score = targets.stream().map(x -> x.getConfidenceVal()).collect(Collectors.toList()).stream().reduce((x, y) -> x + y).get();
-        log.debug("分数:{} ", score);
-        if((Double.valueOf(score) / 6) > 94.0) {
-            log.info("结果: {}", Double.valueOf(score) / 6);
-            factorIndex.put(canId, 100);
-        }
+        log.info(JSON.toJSONString(cur));
+        TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+//        if(targetsCache.getIfPresent(canId) == null) {
+//            targetsCache.put(canId, new ArrayList<Target>() {{
+//                add(cur);
+//            }});
+//        } else {
+//            List<Target> targetList = targetsCache.getIfPresent(canId);
+//            if(trueTarget.getIfPresent(canId) != null) {
+//                if(trueTarget.getIfPresent(canId).get() == 0) {
+//                    factorIndex.put(canId, targetList.size());
+//                    trueTarget.put(canId, new AtomicInteger(trueTarget.getIfPresent(canId).addAndGet(1)));
+//                }
+//                if(factorIndex.getIfPresent(canId) >= 100 ) {
+//                    // ok
+//                    if(factorIndex.getIfPresent(canId) == 100) {
+//                        targetList.stream().forEach(i -> {
+//                            TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(i));
+//                            log.info(i.toString());
+//                        });
+//                        factorIndex.put(canId, 101);
+//                    } else {
+//                        if(cur.getTraceVal() == 3) {
+//                            TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+//                            log.info(cur.toString());
+//                        }
+//                    }
+//
+//                } else {
+//                    Integer factorSize = factorIndex.getIfPresent(canId) + 8;
+//                    if(targetList.size() > factorSize) {
+//                        log.debug("targetList.size = {}, {} ", targetList.size(), factorSize);
+//                        checkConfidence(canId, targetList.subList(factorIndex.getIfPresent(canId), factorIndex.getIfPresent(canId) + 6));
+//                    }
+//                }
+//
+//            } else {
+//                if (cur.getConfidenceVal().intValue() == 80 && targetList.get(targetList.size() -1).getConfidenceVal().intValue() == 60
+//                    && rangeVal < 7000l  // 对于大车和小车都一样
+//                ) {
+//                    // 真实目标
+//                    trueTarget.put(canId, new AtomicInteger(0));
+//                }
+//            }
+//            targetList.add(cur);
+//        }
+//    }
+//
+//    /**
+//     * 算出连续六个目标的总体评分, 达到标准, 放行.
+//     * @param canId
+//     * @param targets
+//     */
+//    public static void checkConfidence(int canId, List<Target> targets) {
+//        double score = targets.stream().map(x -> x.getConfidenceVal()).collect(Collectors.toList()).stream().reduce((x, y) -> x + y).get();
+//        log.debug("分数:{} ", score);
+//        if((Double.valueOf(score) / 6) > 94.0) {
+//            log.info("结果: {}", Double.valueOf(score) / 6);
+//            factorIndex.put(canId, 100);
+//        }
+//    }
     }
 
 
