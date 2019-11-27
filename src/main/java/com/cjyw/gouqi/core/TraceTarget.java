@@ -75,10 +75,10 @@ public class TraceTarget {
                         checkConfidence(canId, targetList.subList(factorIndex.getIfPresent(canId), factorIndex.getIfPresent(canId) + 6));
                     }
                 }
-
             } else {
-                if (cur.getConfidenceVal().intValue() == 80 && targetList.get(targetList.size() -1).getConfidenceVal().intValue() == 60
-                    && rangeVal < 7000l  // 对于大车和小车都一样
+                int last = targetList.get(targetList.size() -1).getConfidenceVal().intValue();
+                if ((cur.getConfidenceVal().intValue() == 80 || cur.getConfidenceVal().intValue() == 79 ) && last >= 55
+                    && rangeVal < 150  // 对于大车和小车都一样
                 ) {
                     // 真实目标
                     trueTarget.put(canId, new AtomicInteger(0));
@@ -96,11 +96,9 @@ public class TraceTarget {
     public static void checkConfidence(int canId, List<Target> targets) {
         double score = targets.stream().map(x -> x.getConfidenceVal()).collect(Collectors.toList()).stream().reduce((x, y) -> x + y).get();
         log.debug("分数:{} ", score);
-        if((Double.valueOf(score) / 6) > 94.0) {
+        if((Double.valueOf(score) / 6) > 93.0) {
             log.info("结果: {}", Double.valueOf(score) / 6);
             factorIndex.put(canId, 100);
         }
     }
-
-
 }

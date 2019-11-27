@@ -122,8 +122,6 @@ public class RadioServer {
         List<Long> target = Longs.asList(Stream.of(Convertor.bytesToBinary(data).split("")).mapToLong(Long::parseLong).toArray());
         if(canId >= 1024 && canId <= 1087) {
             msgIndex1(target, canId, Convertor.bytesToHex(data));
-        } else if(canId >= 1280 && canId <= 1343) {
-            msgIndex2(target, canId, Convertor.bytesToHex(data));
         }
     }
 
@@ -148,11 +146,8 @@ public class RadioServer {
         long rateValue = val(t.subList(50, 56), t.subList(56, 64));
         double rateRes = Convertor.scale(Double.valueOf(rateValue) * 0.02d - 163.84d);
 
-        Target cur = new Target(canId, trackValue, Double.valueOf(confidenceValue), rangeRes, angleRes, rateRes, powerRes, Double.valueOf(frameValue));
-
         if(trackValue.intValue() == 3 || trackValue.intValue() == 1) {
-            log.info("[1] -> {}",cur.toString());
-            //TraceTarget.trace(canId, trackValue, confidenceValue, rangeRes, angleRes, rateRes, powerRes, Double.valueOf(frameValue));
+            TraceTarget.trace(canId, trackValue, confidenceValue, rangeRes, angleRes, rateRes, powerRes, Double.valueOf(frameValue));
         }
     }
 
@@ -167,18 +162,4 @@ public class RadioServer {
         }};
         return compute(sort);
     }
-
-    private void msgIndex2(List<Long> t, int canId, String source) {
-        double frameNo = Double.valueOf(compute(t.subList(4, 7)));
-        long updateMode = compute(t.subList(16, 17));
-        double updateVal = Double.valueOf(updateMode);
-        long rangeAccel = compute(t.subList(37, 45));
-        double rangeAccelVal = Convertor.scale(Double.valueOf(rangeAccel) * 0.1d - 25.6d);
-        long pitchAngle = compute(t.subList(46, 55));
-        double pitchAngleVal = Convertor.scale(Double.valueOf(pitchAngle) * 0.05d - 25.6d);
-        long lateral = compute(t.subList(56, 63));
-        double lateralVal = Convertor.scale(Double.valueOf(lateral) * 0.2d - 25.6d);
-        log.info("[2] -> {}", new AssistedTarget(canId, updateVal, rangeAccelVal, pitchAngleVal, lateralVal, frameNo).toString());
-    }
-
 }
