@@ -8,6 +8,7 @@ public class Target {
     private Double angleVal;
     private Double rateVal;
     private Double powerVal;
+    private Double frameVal;
 
     public int getCanId() {
         return canId;
@@ -65,7 +66,15 @@ public class Target {
         this.rangeVal = rangeVal;
     }
 
-    public Target(int canId, Long traceVal, Double confidenceVal, Double rangeVal, Double angleVal, Double rateVal, Double powerVal) {
+    public Double getFrameVal() {
+        return frameVal;
+    }
+
+    public void setFrameVal(Double frameVal) {
+        this.frameVal = frameVal;
+    }
+
+    public Target(int canId, Long traceVal, Double confidenceVal, Double rangeVal, Double angleVal, Double rateVal, Double powerVal, Double frameVal) {
         this.canId = canId;
         this.traceVal = traceVal;
         this.confidenceVal = confidenceVal;
@@ -73,6 +82,7 @@ public class Target {
         this.angleVal = angleVal;
         this.rateVal = rateVal;
         this.powerVal = powerVal;
+        this.frameVal = frameVal;
     }
 
     @Override
@@ -89,7 +99,8 @@ public class Target {
         if (rangeVal != null ? !rangeVal.equals(target.rangeVal) : target.rangeVal != null) return false;
         if (angleVal != null ? !angleVal.equals(target.angleVal) : target.angleVal != null) return false;
         if (rateVal != null ? !rateVal.equals(target.rateVal) : target.rateVal != null) return false;
-        return powerVal != null ? powerVal.equals(target.powerVal) : target.powerVal == null;
+        if (powerVal != null ? !powerVal.equals(target.powerVal) : target.powerVal != null) return false;
+        return frameVal != null ? frameVal.equals(target.frameVal) : target.frameVal == null;
     }
 
     @Override
@@ -101,6 +112,7 @@ public class Target {
         result = 31 * result + (angleVal != null ? angleVal.hashCode() : 0);
         result = 31 * result + (rateVal != null ? rateVal.hashCode() : 0);
         result = 31 * result + (powerVal != null ? powerVal.hashCode() : 0);
+        result = 31 * result + (frameVal != null ? frameVal.hashCode() : 0);
         return result;
     }
 
@@ -114,6 +126,7 @@ public class Target {
                 ", angleVal=" + angleVal +
                 ", rateVal=" + rateVal +
                 ", powerVal=" + powerVal +
+                ", frameVal=" + frameVal +
                 '}';
     }
 }

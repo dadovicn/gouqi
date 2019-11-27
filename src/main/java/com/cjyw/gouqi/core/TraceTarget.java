@@ -40,8 +40,8 @@ public class TraceTarget {
      * @param confidenceVal  置信度
      * @param rangeVal 距离
      */
-    public static void trace(int canId, Long traceVal,  double confidenceVal, double rangeVal, double angleVal, double rateValue, double powerValue) {
-        Target cur = new Target(canId, traceVal, confidenceVal, rangeVal, angleVal, rateValue, powerValue);
+    public static void trace(int canId, Long traceVal,  double confidenceVal, double rangeVal, double angleVal, double rateValue, double powerValue, double frameValue) {
+        Target cur = new Target(canId, traceVal, confidenceVal, rangeVal, angleVal, rateValue, powerValue, frameValue);
         if(targetsCache.getIfPresent(canId) == null) {
             targetsCache.put(canId, new ArrayList<Target>() {{
                 add(cur);
