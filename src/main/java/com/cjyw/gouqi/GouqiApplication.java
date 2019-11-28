@@ -10,7 +10,7 @@ import com.cjyw.gouqi.core.RadioServer;
 public class GouqiApplication {
     public static void main(String[] args) throws Exception {
         RadioServer server = new RadioServer();
-        server.run(8887);
+        server.run(8888);
 
 //        Fake.init();
 

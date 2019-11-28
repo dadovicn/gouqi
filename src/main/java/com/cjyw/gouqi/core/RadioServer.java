@@ -1,5 +1,6 @@
 package com.cjyw.gouqi.core;
 
+import com.cjyw.gouqi.entity.Target;
 import com.cjyw.gouqi.util.Convertor;
 import com.google.common.primitives.Longs;
 import io.netty.bootstrap.ServerBootstrap;
@@ -120,59 +121,33 @@ public class RadioServer {
         List<Long> target = Longs.asList(Stream.of(Convertor.bytesToBinary(data).split("")).mapToLong(Long::parseLong).toArray());
         if(canId >= 1024 && canId <= 1087) {
             msgIndex1(target, canId, Convertor.bytesToHex(data));
-        } else if(canId >= 1280 && canId <= 1343) {
-            msgIndex2(target);
         }
     }
 
     private void msgIndex1(List<Long> t, int canId, String source) {
         // 帧号后四位
         Long frameValue = compute(t.subList(0, 4));
-        log.debug("帧号后四位: {}", frameValue);
 
         // 轨迹状态 0: empty, 1: first detected 2: first detected 3: valid, 10: invalid
         Long trackValue = compute(t.subList(4, 8));
-        log.debug("轨迹状态: {}", trackValue);
         // 目标置信度
         Long confidenceValue = compute(t.subList(9, 16));
-        log.debug("目标置信度: {}", confidenceValue);
-
-        log.debug("预留: {}", t.subList(15, 15)); // 预留
 
         Long angleValue = val(t.subList(16, 24), t.subList(24, 27));
-        String angleStr = String.format("%.2f", Double.valueOf(angleValue * 0.1d - 102.4d));
         double angleRes = Convertor.scale(Double.valueOf(angleValue * 0.1d - 102.4d));
-        log.debug("目标水平角度: {}, 原始值: {}", angleStr, angleValue);
 
         Long rangeValue = val(t.subList(27, 32), t.subList(32, 40));
-        String rangeStr = String.format("%.2f", Double.valueOf(rangeValue) * 0.05);
         double rangeRes = Convertor.scale(Double.valueOf(rangeValue) * 0.05);
-        log.debug("目标-{}-相对距离: {}, 原始值: {}", canId, rangeStr , rangeValue);
 
         long powerValue = val(t.subList(40, 48), t.subList(48, 50));
-        String powerStr = String.format("%.2f", Double.valueOf(powerValue) * 0.1d);
         double powerRes = Convertor.scale(Double.valueOf(powerValue) * 0.1d);
-        log.debug("目标强度: {}, 原始值: {}", powerStr, powerValue);
 
         long rateValue = val(t.subList(50, 56), t.subList(56, 64));
         double rateRes = Convertor.scale(Double.valueOf(rateValue) * 0.02d - 163.84d);
-        String rateStr = String.format("%.2f", Double.valueOf(rateValue) * 0.02d - 163.84d);
 
-        if(trackValue.intValue() == 3) {
-            TraceTarget.trace(canId, trackValue, confidenceValue, rangeRes, angleRes, rateRes, powerRes);
-            log.debug("|= 位图({}个): {}", t.size(), t);
-            log.debug("|= canId: {} , 原始字节hex: {}", canId, source);
-            log.debug("|= 序号:{}, canId:{},  帧号: {}, 轨迹状态: {}, 目标置信度: {}, 水平角度:{}, 相对距离: {}, 目标强度: {}, 径向速度: {} ",
-                    a.get(),
-                    canId,
-                    frameValue,
-                    trackValue,
-                    confidenceValue,
-                    angleStr,
-                    rangeStr,
-                    powerStr,
-                    rateStr
-                    );
+        if(trackValue.intValue() == 3 || trackValue.intValue() == 1) {
+            Target cur = new Target(canId, frameValue.intValue(), trackValue, Double.valueOf(confidenceValue), rangeRes, angleRes, rateRes, powerRes);
+            log.info(cur.toString());
         }
     }
 
@@ -187,20 +162,4 @@ public class RadioServer {
         }};
         return compute(sort);
     }
-
-    private void msgIndex2(List<Long> t) {
-        log.debug("检测到index2: -> ");
-        log.debug("帧号后四位: {}", t.subList(4, 7)); // 帧号后四位
-        log.debug("预留: {}", t.subList(0, 3)); // 预留
-        log.debug("预留: {}", t.subList(8, 21)); // 预留
-        log.debug("目标更新模式: {}", t.subList(22, 23)); // 目标更新模式
-        log.debug("预留: {}", t.subList(24, 31)); // 预留
-        log.debug("预留: {}", t.subList(35, 39)); // 预留
-        log.debug("目标俯仰角度-1: {}", t.subList(32, 34)); // 目标俯仰角度
-        log.debug("目标俯仰角度-2: {}", t.subList(42, 47)); //
-        log.debug("目标相对径向加速度-1: {}", t.subList(40, 41)); // 目标相对径向加速度
-        log.debug("目标相对径向加速度-2: {}", t.subList(48, 55)); //
-        log.debug("目标相对横向速度: {}", t.subList(56, 63)); // 目标相对横向速度
-    }
-
 }

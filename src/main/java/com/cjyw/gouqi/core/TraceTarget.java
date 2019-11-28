@@ -41,9 +41,9 @@ public class TraceTarget {
      * @param rangeVal 距离
      */
     public static void trace(int canId, Long traceVal,  double confidenceVal, double rangeVal, double angleVal, double rateValue, double powerValue) {
-        Target cur = new Target(canId, traceVal, confidenceVal, rangeVal, angleVal, rateValue, powerValue);
-        log.info(JSON.toJSONString(cur));
-        TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+//        Target cur = new Target(canId, traceVal, confidenceVal, rangeVal, angleVal, rateValue, powerValue);
+//        log.info(JSON.toJSONString(cur));
+//        TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
 //        if(targetsCache.getIfPresent(canId) == null) {
 //            targetsCache.put(canId, new ArrayList<Target>() {{
 //                add(cur);

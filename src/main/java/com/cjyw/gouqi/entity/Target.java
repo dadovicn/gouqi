@@ -2,6 +2,7 @@ package com.cjyw.gouqi.entity;
 
 public class Target {
     private int canId;
+    private int frameNo;
     private Long traceVal;
     private Double confidenceVal;
     private Double rangeVal;
@@ -9,12 +10,21 @@ public class Target {
     private Double rateVal;
     private Double powerVal;
 
+
     public int getCanId() {
         return canId;
     }
 
     public void setCanId(int canId) {
         this.canId = canId;
+    }
+
+    public int getFrameNo() {
+        return frameNo;
+    }
+
+    public void setFrameNo(int frameNo) {
+        this.frameNo = frameNo;
     }
 
     public Double getPowerVal() {
@@ -65,8 +75,9 @@ public class Target {
         this.rangeVal = rangeVal;
     }
 
-    public Target(int canId, Long traceVal, Double confidenceVal, Double rangeVal, Double angleVal, Double rateVal, Double powerVal) {
+    public Target(int canId, int frameNo, Long traceVal, Double confidenceVal, Double rangeVal, Double angleVal, Double rateVal, Double powerVal) {
         this.canId = canId;
+        this.frameNo = frameNo;
         this.traceVal = traceVal;
         this.confidenceVal = confidenceVal;
         this.rangeVal = rangeVal;
@@ -83,6 +94,7 @@ public class Target {
         Target target = (Target) o;
 
         if (canId != target.canId) return false;
+        if (frameNo != target.frameNo) return false;
         if (traceVal != null ? !traceVal.equals(target.traceVal) : target.traceVal != null) return false;
         if (confidenceVal != null ? !confidenceVal.equals(target.confidenceVal) : target.confidenceVal != null)
             return false;
@@ -95,6 +107,7 @@ public class Target {
     @Override
     public int hashCode() {
         int result = canId;
+        result = 31 * result + frameNo;
         result = 31 * result + (traceVal != null ? traceVal.hashCode() : 0);
         result = 31 * result + (confidenceVal != null ? confidenceVal.hashCode() : 0);
         result = 31 * result + (rangeVal != null ? rangeVal.hashCode() : 0);
@@ -108,6 +121,7 @@ public class Target {
     public String toString() {
         return "Target{" +
                 "canId=" + canId +
+                ", frameNo=" + frameNo +
                 ", traceVal=" + traceVal +
                 ", confidenceVal=" + confidenceVal +
                 ", rangeVal=" + rangeVal +
