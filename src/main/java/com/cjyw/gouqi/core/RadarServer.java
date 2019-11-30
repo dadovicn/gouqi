@@ -1,6 +1,5 @@
 package com.cjyw.gouqi.core;
 
-import com.cjyw.gouqi.entity.AssistedTarget;
 import com.cjyw.gouqi.entity.Target;
 import com.cjyw.gouqi.util.Convertor;
 import com.google.common.primitives.Longs;
@@ -31,8 +30,8 @@ import java.util.stream.Stream;
  * @author dadovicn
  * @date   2019/3/11
  */
-public class RadioServer {
-    private static final Logger log = LoggerFactory.getLogger(RadioServer.class);
+public class RadarServer {
+    private static final Logger log = LoggerFactory.getLogger(RadarServer.class);
     private static Map<String,Boolean> clientStatusMap = new ConcurrentHashMap<>();
     private static final String id = "[usr-can-net-200-RadioServer]";
     private static final AttributeKey<String> CLIENT_ID = AttributeKey.valueOf("channel.clientId");
@@ -129,7 +128,6 @@ public class RadioServer {
         // 帧号后四位
         Long frameValue = compute(t.subList(0, 4));
         log.debug("帧号后四位: {}", frameValue);
-        // 轨迹状态 0: empty, 1: first detected 2: first detected 3: valid, 10: invalid
         Long trackValue = compute(t.subList(4, 8));
         // 目标置信度
         Long confidenceValue = compute(t.subList(9, 16));
@@ -147,7 +145,10 @@ public class RadioServer {
         double rateRes = Convertor.scale(Double.valueOf(rateValue) * 0.02d - 163.84d);
 
         if(trackValue.intValue() == 3 || trackValue.intValue() == 1) {
-            TraceTarget.trace(canId, trackValue, confidenceValue, rangeRes, angleRes, rateRes, powerRes, Double.valueOf(frameValue));
+            Target cur = new Target(canId, trackValue, Double.valueOf(confidenceValue), rangeRes, angleRes, rateRes, powerRes, Double.valueOf(frameValue));
+            TargetFitting.trace(cur);
+        } else {
+            // todo 静止目标打点
         }
     }
 
