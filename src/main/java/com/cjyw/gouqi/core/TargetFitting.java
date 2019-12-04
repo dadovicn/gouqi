@@ -21,88 +21,67 @@ import static java.util.Map.*;
  */
 public class TargetFitting {
     private static final double  ANGLE_SPLIT = 0d;
+    private static final double  TARGET_SPACE = 5d;
+    private static final double  ANGLE_SPACE = 5d;
     private static final Logger log = LoggerFactory.getLogger(TargetFitting.class);
     private static AtomicInteger cartId = new AtomicInteger(0);
 
-
     /** <k, range> */
-    private static Cache<Integer, Double> fitMap = CacheBuilder.newBuilder()
-            .maximumSize(32).expireAfterAccess(1000, TimeUnit.MILLISECONDS).build();
+    private static Cache<Integer, Target> fitMap = CacheBuilder.newBuilder()
+            .maximumSize(32).expireAfterAccess(2000, TimeUnit.MILLISECONDS).build();
 
     /**
      * 目标跟踪
      * @param cur 当前目标
      */
     public static void trace(Target cur) {
-        if(Math.abs(cur.getAngleVal()) > 5) {
-            if(cur.getAngleVal() < 0) {
-                cur.setAngleVal(-1.5);
-            } else {
-                cur.setAngleVal(1.5);
-            }
-        }
+        log.info(fitMap.asMap().keySet().toString());
         if(cur.getTraceVal().intValue() == 1 && cur.getRangeVal() < 60) {
             // 目标出现
-
             if(fitMap.size() == 0) {
                 cartId.set(0);
-                fitMap.put(cartId.addAndGet(1), cur.getRangeVal());
+                fitMap.put(cartId.addAndGet(1), cur);
                 // 第一个目标
             } else {
-                if(checkTargetCart(cur.getRangeVal())) {
+                if(checkTargetCart(cur)) {
                     // 新目标出现
-                    if(fitMap.asMap().size() >= 2) {
-                        launderTarget();
-                    }
-
-                    log.info("新目标出现: ", cartId.toString() );
-                    fitMap.put(cartId.addAndGet(1), cur.getRangeVal());
-                    if(fitMap.asMap().size() >= 2) {
+                    fitMap.put(cartId.addAndGet(1), cur);
+                    log.info("新目标出现: {}", cur.getRangeVal());
+                    if(fitMap.asMap().size() >= 3) {
                         launderTarget();
                     }
                 } else {
+                    correctAngle(cur);
                     // 已有目标, 更新目标
-                    log.info("先找目标, 然后更新, 更新模式");
                     updatePosition(cur.getRangeVal(), cur);
                 }
             }
-
-
-
         }
-        if(cur.getTraceVal().intValue() == 3) {
+        if(cur.getTraceVal().intValue() == 3 && filter(cur) && cur.getConfidenceVal().intValue() > 40) {
             // 更新距离
             // 已经被跟踪的目标
             updatePosition(cur.getRangeVal(), cur);
-            updatePosition(cur.getRangeVal(), cur);
         }
     }
 
-
-
     /**
-     * 检查大车目标
-     * @param range
+     * 目标检测
+     * @param cur
      * @return
      */
-    public static boolean checkTargetCart(Double range) {
-        Optional<Entry<Integer, Double>> lastCur = fitMap.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? x: y);
+    public static boolean checkTargetCart(Target cur) {
+        // 返回当前目标中的最小距离
+        Optional<Entry<Integer, Target>> lastCur = fitMap.asMap().entrySet().parallelStream().reduce((x, y) -> x.getValue().getRangeVal() < y.getValue().getRangeVal() ? x: y);
         if(lastCur.isPresent()) {
-            if((range -lastCur.get().getValue()) > 20) {
-                return range < lastCur.get().getValue();
+            // 新目标间距 大于 20
+            if((lastCur.get().getValue().getRangeVal()) - cur.getRangeVal() > 30) {
+                return true;
+            } else {
+//                // 调整参数
+//                if(Math.abs(lastCur.get().getValue().getAngleVal() - cur.getAngleVal()) > ANGLE_SPACE) {
+//                    return true;
+//                }
             }
-        }
-        return false;
-    }
-
-    /**
-     * 检查是否为新目标
-     * @return true: 新目标, false 已有目标
-     */
-    public static boolean checkTarget(Double range, Cache<Integer, Double> cache) {
-        Optional<Entry<Integer, Double>> lastCur = cache.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? x: y);
-        if(lastCur.isPresent()) {
-            return range < lastCur.get().getValue();
         }
         return false;
     }
@@ -121,31 +100,40 @@ public class TargetFitting {
             // 直接丢掉
             return;
         }
-        Optional<Entry<Integer, Double>> max = fitMap.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? y: x);
+        Optional<Entry<Integer, Target>> max = fitMap.asMap().entrySet().parallelStream().reduce((x, y) -> x.getValue().getRangeVal() < y.getValue().getRangeVal() ? y: x);
         if(max.isPresent()) {
-            double maxRange = max.get().getValue();
+            double maxRange = max.get().getValue().getRangeVal();
             int pos = max.get().getKey();
             if(range > maxRange) {
                 cur.setCanId(pos);
-                log.info(cur.toString());
-                fitMap.put(pos, range);
-                TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
-            }
-        }
-        fitMap.put(0, 0d);
-        fitMap.asMap().entrySet().stream().reduce((x, y) -> {
-            if (x.getValue() < range && range < y.getValue()) {
-                // 更新目标位置
-                if(x.getKey() != 0) {
-                    fitMap.put(x.getKey(), range);
-                    cur.setCanId(x.getKey());
-                    log.info(cur.toString());
+                fitMap.put(pos, cur);
+                if(cur.getConfidenceVal().intValue() == 0 && cur.getRangeVal() < 50) {
                     TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
                 }
+                if(cur.getConfidenceVal().intValue() >= 60) {
+                    TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+                }
+            } else {
+                fitMap.put(0, new Target(0, 1l, 0d, 0d, 0d, 0d, 0d, 0d));
+                fitMap.asMap().entrySet().parallelStream().reduce((x, y) -> {
+                    if (x.getValue().getRangeVal() < range && range < y.getValue().getRangeVal()) {
+                        // 更新目标位置
+                        if(x.getKey() != 0) {
+                            fitMap.put(x.getKey(), cur);
+                            cur.setCanId(x.getKey());
+                            if(cur.getConfidenceVal().intValue() == 0 && cur.getRangeVal() < 50) {
+                                TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+                            }
+                            if(cur.getConfidenceVal().intValue() >= 60) {
+                                TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+                            }
+                        }
+                    }
+                    return y;
+                });
+                fitMap.invalidate(0);
             }
-            return y;
-        });
-        fitMap.invalidate(0);
+        }
     }
 
     /**
@@ -153,28 +141,54 @@ public class TargetFitting {
      */
     public static void launderTarget() {
         List<Integer> mqp = new ArrayList<>(10);
-        log.info("移除目标: {}", mqp.toString());
-        if(fitMap.asMap().size() > 2) {
-            fitMap.asMap().entrySet().stream().reduce((x, y) -> {
-                if(y.getValue() - x.getValue() < 5) {
+        List<Integer> total = new ArrayList<>(2);
+        if(fitMap.asMap().size() == 2) {
+            fitMap.asMap().entrySet().forEach(w -> {
+               total.add(w.getValue().getRangeVal().intValue());
+            });
+            if(Math.abs(total.get(0) - total.get(1)) < 5) {
+                Integer a = (Integer) fitMap.asMap().keySet().toArray()[0];
+                fitMap.invalidate(a);
+            }
+        } else if (fitMap.asMap().size() > 2){
+            fitMap.asMap().entrySet().parallelStream().reduce((x, y) -> {
+                if(y.getValue().getRangeVal() - x.getValue().getRangeVal() < 3) {
+                    log.info("移除目标: {}", x.getKey());
                     mqp.add(x.getKey());
                 }
                 return y;
             });
+            mqp.forEach(i -> {
+                fitMap.invalidate(i);
+            });
         }
-        mqp.forEach(i -> {
-            fitMap.invalidate(i);
-        });
+
+
     }
 
-
+    /**
+     * 纠正角度
+     * @param cur
+     */
+    public static void correctAngle(Target cur) {
+        if(Math.abs(cur.getAngleVal()) > 5) {
+            if(cur.getAngleVal() < 0) {
+                cur.setAngleVal(-1.5);
+            } else {
+                cur.setAngleVal(1.5);
+            }
+        }
+    }
 
     /**
      * todo 滤波
      * @param cur 当前目标
      */
     public static boolean filter(Target cur) {
-        return true;
+        if(Math.abs(cur.getAngleVal()) < 5) {
+           return true;
+        }
+        return false;
     }
 
     /**
