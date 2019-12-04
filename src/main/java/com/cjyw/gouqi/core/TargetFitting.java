@@ -22,52 +22,105 @@ import static java.util.Map.*;
 public class TargetFitting {
     private static final double  ANGLE_SPLIT = 0d;
     private static final Logger log = LoggerFactory.getLogger(TargetFitting.class);
-    private static AtomicInteger targetId = new AtomicInteger(0);
+    private static AtomicInteger cartId = new AtomicInteger(0);
+    private static AtomicInteger carId = new AtomicInteger(0);
+
 
     /** <k, range> */
-    private static Cache<Integer, Double> fitMap = CacheBuilder.newBuilder()
-            .maximumSize(32).expireAfterAccess(3, TimeUnit.SECONDS).build();
+    private static Cache<Integer, Double> fitCartMap = CacheBuilder.newBuilder()
+            .maximumSize(32).expireAfterAccess(1000, TimeUnit.MILLISECONDS).build();
+
+    private static Cache<Integer, Double> fitCarMap = CacheBuilder.newBuilder()
+            .maximumSize(32).expireAfterAccess(1000, TimeUnit.MILLISECONDS).build();
 
     /**
      * 目标跟踪
      * @param cur 当前目标
      */
     public static void trace(Target cur) {
-        if(cur.getTraceVal().intValue() == 1 && cur.getRangeVal() < 60) {
-            // 目标出现
-            if(fitMap.size() == 0) {
-                fitMap.put(targetId.addAndGet(1), cur.getRangeVal());
-                // 第一个目标
+        if(Math.abs(cur.getAngleVal()) > 5) {
+            if(cur.getAngleVal() < 0) {
+                cur.setAngleVal(-1.5);
             } else {
-                if(checkTarget(cur.getRangeVal())) {
-                    // 新目标出现
-                    log.info("新目标出现: ", targetId.toString() );
-                    fitMap.put(targetId.addAndGet(1), cur.getRangeVal());
-                } else {
-                    // 已有目标, 更新目标
-                    log.info("先找目标, 然后更新, 更新模式");
-                    updatePosition(cur.getRangeVal(), cur);
-                }
+                cur.setAngleVal(1.5);
             }
         }
-        if(cur.getTraceVal().intValue() == 3) {
-            // 已经被跟踪的目标
-            updatePosition(cur.getRangeVal(), cur);
+        if(cur.getTraceVal().intValue() == 1 && cur.getRangeVal() < 60) {
+            // 目标出现
+            if(cur.getRangeVal().intValue() < 25) {
+                if(fitCartMap.size() == 0) {
+                    cartId.set(0);
+                    fitCartMap.put(cartId.addAndGet(1), cur.getRangeVal());
+                    // 第一个目标
+                } else {
+                    if(checkTargetCart(cur.getRangeVal())) {
+                        // 新目标出现
+                        log.info("新目标出现: ", cartId.toString() );
+                        fitCartMap.put(cartId.addAndGet(1), cur.getRangeVal());
+                        if(fitCartMap.asMap().size() >= 2) {
+                            launderCartTarget();
+                        }
+                    } else {
+                        // 已有目标, 更新目标
+                        log.info("先找目标, 然后更新, 更新模式");
+                        updatePosition(cur.getRangeVal(), cur, fitCartMap);
+                    }
+                }
+            } else {
+                if(fitCarMap.size() == 0) {
+                    carId.set(50);
+                    fitCarMap.put(carId.addAndGet(1), cur.getRangeVal());
+                    // 第一个目标
+                } else {
+                    if(checkTarget(cur.getRangeVal(), fitCarMap)) {
+                        // 新目标出现
+                        log.info("新目标出现: ", carId.toString() );
+                        fitCarMap.put(carId.addAndGet(1), cur.getRangeVal());
+                        if(fitCarMap.asMap().size() >= 2) {
+                            launderCarTarget();
+                        }
+                    } else {
+                        // 已有目标, 更新目标
+                        log.info("先找目标, 然后更新, 更新模式");
+                        updatePosition(cur.getRangeVal(), cur, fitCarMap);
+                    }
+                }
+            }
+
         }
+        if(cur.getTraceVal().intValue() == 3) {
+            // 更新距离
+            // 已经被跟踪的目标
+            updatePosition(cur.getRangeVal(), cur, fitCarMap);
+            updatePosition(cur.getRangeVal(), cur, fitCartMap);
+        }
+    }
+
+
+
+    /**
+     * 检查大车目标
+     * @param range
+     * @return
+     */
+    public static boolean checkTargetCart(Double range) {
+        Optional<Entry<Integer, Double>> lastCur = fitCartMap.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? x: y);
+        if(lastCur.isPresent()) {
+            if((range -lastCur.get().getValue()) > 20) {
+                return range < lastCur.get().getValue();
+            }
+        }
+        return false;
     }
 
     /**
      * 检查是否为新目标
      * @return true: 新目标, false 已有目标
      */
-    public static boolean checkTarget(Double range) {
-        log.info("尺寸: {}" , fitMap.size());
-        Optional<Entry<Integer, Double>> lastCur = fitMap.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? x: y);
+    public static boolean checkTarget(Double range, Cache<Integer, Double> cache) {
+        Optional<Entry<Integer, Double>> lastCur = cache.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? x: y);
         if(lastCur.isPresent()) {
-            log.info("找到的最小值为 {}", lastCur.get().getValue());
             return range < lastCur.get().getValue();
-        } else {
-            log.info("没找到最小值");
         }
         return false;
     }
@@ -78,35 +131,72 @@ public class TargetFitting {
      * @param cur
      * @return
      */
-    public static void updatePosition(Double range, Target cur) {
+    public static void updatePosition(Double range, Target cur, Cache<Integer, Double> cache) {
+        // 先找是属于哪边的车
+
         // 规约开始
         if(range > 150.0) {
             // 直接丢掉
             return;
         }
-        Optional<Entry<Integer, Double>> max = fitMap.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? y: x);
+        Optional<Entry<Integer, Double>> max = cache.asMap().entrySet().stream().reduce((x, y) -> x.getValue() < y.getValue() ? y: x);
         if(max.isPresent()) {
             double maxRange = max.get().getValue();
             int pos = max.get().getKey();
             if(range > maxRange) {
                 cur.setCanId(pos);
                 log.info(cur.toString());
-                fitMap.put(pos, range);
+                cache.put(pos, range);
                 TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
             }
         }
-        fitMap.put(0, 0d);
-        fitMap.asMap().entrySet().stream().reduce((x, y) -> {
+        cache.put(0, 0d);
+        cache.asMap().entrySet().stream().reduce((x, y) -> {
             if (x.getValue() < range && range < y.getValue()) {
                 // 更新目标位置
-                fitMap.put(x.getKey(), range);
-                cur.setCanId(x.getKey());
-                log.info(cur.toString());
-                TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+                if(x.getKey() != 0) {
+                    cache.put(x.getKey(), range);
+                    cur.setCanId(x.getKey());
+                    log.info(cur.toString());
+                    TargetReport.notifyCloud(PropertiesSource.INSTANCE.getConfig().rabbitConfig, JSON.toJSONString(cur));
+                }
             }
             return y;
         });
-        fitMap.invalidate(0);
+        cache.invalidate(0);
+    }
+
+    /**
+     * 目标清洗: 移除假目标
+     */
+    public static void launderCartTarget() {
+        List<Integer> mqp = new ArrayList<>(10);
+        if(fitCartMap.asMap().size() > 2) {
+            fitCartMap.asMap().entrySet().stream().reduce((x, y) -> {
+                if(y.getValue() - x.getValue() < 10) {
+                    mqp.add(x.getKey());
+                }
+                return y;
+            });
+        }
+        mqp.forEach(i -> {
+            fitCartMap.invalidate(i);
+        });
+    }
+
+    public static void launderCarTarget() {
+        List<Integer> mqp = new ArrayList<>(10);
+        if(fitCarMap.asMap().size() > 2) {
+            fitCarMap.asMap().entrySet().stream().reduce((x, y) -> {
+                if(y.getValue() - x.getValue() < 20) {
+                    mqp.add(x.getKey());
+                }
+                return y;
+            });
+        }
+        mqp.forEach(i -> {
+            fitCarMap.invalidate(i);
+        });
     }
 
     /**
